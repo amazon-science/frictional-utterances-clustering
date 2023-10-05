@@ -1,0 +1,5 @@
+sentence-transformers
+pandas
+datasets
+matplotlib
+-e .
