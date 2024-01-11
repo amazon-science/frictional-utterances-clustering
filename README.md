@@ -257,7 +257,7 @@ def evaluate_new_clusters(utterances_dataset: pd.DataFrame, pred_clusters):
    return results
 ```
 
-**Evaluation Metrics**. The  metrics results returned by the function `compute_evaluation_metrics` function are stored in a dict object. The dict keys are the name of clustering evaluation metrics such as Clustering Precision, Recall, F<sub>1</sub> score, Clustering Accuracy and Adjusted Mutual Information Score. The dict values instead correpond to the metric values.
+**Evaluation Metrics**. The  metrics results returned by the function `compute_evaluation_metrics` function are stored in the `results` dict object. The dict keys are the name of clustering evaluation metrics such as Clustering Precision, Recall, F<sub>1</sub> score, Clustering Accuracy and Adjusted Mutual Information Score. The dict values instead correpond to the metric values.
 
 Please, notice that the clustering version of the Precision, Recall and F<sub>1</sub> metrics is different from the corresponding classification version of the metrics. A complete definition of the clustering version of precision, recall, f<sub>1</sub> metrics can be found in [[1]](#1).
 
