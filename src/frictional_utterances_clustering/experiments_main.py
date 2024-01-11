@@ -11,8 +11,8 @@ from frictional_utterances_clustering.utils.clustering_metrics import *
 from frictional_utterances_clustering.utils.clustering_algorithms import *
 from frictional_utterances_clustering.dataset_handling.dataset_utils import *
 
-datasets_languages_and_intents = load_dict_from_json(
-    "data/Datasets_Analysis/datasets_intents_and_languages_with_splits.json")
+#datasets_languages_and_intents = load_dict_from_json(
+#    "data/Datasets_Analysis/datasets_intents_and_languages_with_splits.json")
 
 experiment_category = 'monolingual'
 
@@ -35,12 +35,12 @@ for language_model in os.listdir('fine_tuned_language_models/'):
 # 'CLINC150', ok
 # 'HWU64', 
 
-datasets = os.listdir('data/Processed_Datasets/')
+#datasets = os.listdir('data/Processed_Datasets/')
 
 # adjusted mutual information score: ['DSTC11', 'BANKING77', 'HWU64', 'pathicKnowledge', 'CLINC150','Massive']
 # missing k-means: ['CLINC150', 'pathicKnowledge']
 
-datasets = ['Massive'] #['DSTC11', 'HWU64', 'pathicKnowledge', 'Massive', 'CLINC150', 'BANKING77']
+datasets = ['apibench_data'] #['Massive', 'DSTC11', 'HWU64', 'pathicKnowledge', 'Massive', 'CLINC150', 'BANKING77']
 
 total_gold_clusters = {
     'Snips': [2*2], 
@@ -74,7 +74,8 @@ monolingual_lang_dict = {
     'DSTC11': ['EN'],
     'BANKING77': ['EN'],
     'CLINC150': ['EN'],  
-    'HWU64': ['EN']
+    'HWU64': ['EN'],
+    'apibench_data': ['EN']
 }
 
 monolingual_dict_frac_to_use = {
@@ -86,7 +87,8 @@ monolingual_dict_frac_to_use = {
     'DSTC11': 1.0,
     'BANKING77': 1.0,
     'CLINC150': 0.75,  
-    'HWU64': 1.0
+    'HWU64': 1.0,
+    'apibench_data': 0.20
 }
 
 multilingual_dict_frac_to_use = {
@@ -96,44 +98,46 @@ multilingual_dict_frac_to_use = {
 }
 
 clustering_algorithms = {
-    'connected_componentes': connected_components,
-    'DBSCAN': DBSCAN,
+    #'connected_componentes': connected_components,
+    #'DBSCAN': DBSCAN,
     #'optimized_k_means': optimized_k_means,
     'agglomerative_hierarchical_clustering': agglomerative_hierarchical_clustering, 
     }
     
 parameters_to_optimize = {
-    'connected_componentes':  {
-        'cut_threshold': [
-            0.3, 0.35, 0.4, 0.45, 0.50, 0.55, 0.6, 0.65, 0.70, 0.75, 0.8, 0.85, 0.90, 0.95, 1, 1.05, 1.1],
-    },
+    # 'connected_componentes':  {
+    #     'cut_threshold': [
+    #         0.3, 0.35, 0.4, 0.45, 0.50, 0.55, 0.6, 0.65, 0.70, 0.75, 0.8, 0.85, 0.90, 0.95, 1, 1.05, 1.1],
+    # },
     'agglomerative_hierarchical_clustering': {
-        'linkage': ['ward', 'complete', 'average'],
-        'distance_threshold': [
-            0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.50, 0.55, 0.6, 0.65, 0.70, 0.75, 0.8, 0.85, 0.90, 0.95, 1, 
-            1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45, 1.50, 1.95], # 1.55, 1.6, 1.65, 1.70, 1.75, 1.8, 1.85, 1.90, 
+        'linkage': ['single'],
+        #'distance_threshold': [0.0, 0.25, 0.50, 0.75, 1.0]
+        # 'linkage': ['ward', 'complete', 'average'],
+         'distance_threshold': [
+             0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.50, 0.55, 0.6, 0.65, 0.70, 0.75, 0.8, 0.85, 0.90, 0.95, 1, 
+             1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45, 1.50, 1.95], # 1.55, 1.6, 1.65, 1.70, 1.75, 1.8, 1.85, 1.90, 
     },
-    'DBSCAN': {
-        'eps': [
-            0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.50, 0.55, 0.6, 0.65, 0.70, 0.75, 0.8, 0.85, 0.90, 0.95, 1], 
-        'min_samples': [2, 5, 10, 15, 20, 25, 30],
-    },
-    'optimized_k_means': {
-        'max_clusters':[],
-        'interval_step':[]
-    }
-
+    # 'DBSCAN': {
+    #     'eps': [
+    #         0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.50, 0.55, 0.6, 0.65, 0.70, 0.75, 0.8, 0.85, 0.90, 0.95, 1], 
+    #     'min_samples': [2, 5, 10, 15, 20, 25, 30],
+    # },
+    # 'optimized_k_means': {
+    #     'max_clusters':[],
+    #     'interval_step':[]
+    # }
 }
 
 for i in range(4, 5):
     for dataset in datasets:
         
-        print(dataset)
+        print("dataset:", dataset)
         
-        parameters_to_optimize[
-            'optimized_k_means']['max_clusters'] = total_gold_clusters[dataset]
-        parameters_to_optimize[
-            'optimized_k_means']['interval_step'] = interval_steps[dataset]
+        # skip optmized k-means 
+        # parameters_to_optimize[
+        #     'optimized_k_means']['max_clusters'] = total_gold_clusters[dataset]
+        # parameters_to_optimize[
+        #     'optimized_k_means']['interval_step'] = interval_steps[dataset]
         
         if experiment_category == 'monolingual':
             list_of_languages = monolingual_lang_dict[dataset]
@@ -172,8 +176,9 @@ for i in range(4, 5):
         
         for language_model_path in language_models:
             
-            print(language_model_path)
+            print("language model:", language_model_path)
 
+            '''
             if (dataset == 'pathicKnowledge' or dataset == 'Massive') and 'sentence-transformers_all-mpnet-base-v2' in language_model_path:
                 continue
             
@@ -184,6 +189,7 @@ for i in range(4, 5):
                 and experiment_category == 'multilingual' 
                 and 'multilingual' not in language_model_path):
                 continue
+            '''
             
             print('EXTRACTING THE FEATURES')
             
@@ -237,5 +243,3 @@ for i in range(4, 5):
                     from_list_of_dict_to_jsonl(
                         f'experiment_results/{experiment_category}/experiments_unsupervised_clustering_open_baseline_datasets_train', 
                         experiment_train, write_on_existing_file=True)
-
-                        
