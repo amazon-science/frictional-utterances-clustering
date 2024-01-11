@@ -262,5 +262,6 @@ def evaluate_new_clusters(utterances_dataset: pd.DataFrame, pred_clusters):
 Please, notice that the clustering version of the Precision, Recall and F<sub>1</sub> metrics is different from the corresponding classification version of the metrics. A complete definition of the clustering version of precision, recall, f<sub>1</sub> metrics can be found in [[1]](#1).
 
 
-#####References
+##### References
+
 <a id="1">[1]</a> Iryna Haponchyk, Antonio Uva, Seunghak Yu, Olga Uryupina, and Alessandro Moschitti. 2018. [Supervised Clustering of Questions into Intents for Dialog System Applications](https://aclanthology.org/D18-1254/). In *Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing*, pages 2310–2321, Brussels, Belgium. Association for Computational Linguistics.
