@@ -1,4 +1,5 @@
 # Frictional Utterances Clustering
+
 This is a package to apply clustering algorithms to utterances, 
 embedded with a fine-tuned version out of the [Supervised Intent Clustering package](https://github.com/amazon-science/supervised-intent-clustering).
 
@@ -46,90 +47,220 @@ SPDX-License-Identifier: [CC-BY-NC-4.0](./LICENSE)
     2. the folder above will contain the results on the test set:
        - `experiment_results/experiments_unsupervised_clustering_open_baseline_datasets_test`
 
+<!--
 ## How to use it
 To generate the datasets:
-- run the scripts inside src/dataset_handling for all included datasets
+- run the scripts inside src/dataset_handling for all included  datasets
 - run src/frictional_utterances_clustering/dataset_handling/datasets_basic_statistics.py
 - run src/frictional_utterances_clustering/prepare_data_for_constrastive_supervised_clustering_learning.py
 - run src/frictional_utterances_clustering/dataset_handling/inter_intra_intent_avg_similarity_calculation.py
 - run src/frictional_utterances_clustering/datasets_statistical_analysis.py
 - run src/frictional_utterances_clustering/language_models_evaluator.py
 - run src/frictional_utterances_clustering/experiment_main.py
+-->
+## Walthrough of the Code for the Clusterign Experiments
 
-## Code Walkthrough
+The script `experiments_main.py` contains the code for running the clustering experiments. During a clustering experiment, the program:
+1. [Loads the utternces in the validation and test set of the selected dataset or datasets](#10-loading-the-validation-and-test-set);
+2. [Transform these utterances in their embeddings representations](#20-deriving-the-embeddings-representations-of-utterances);
+3. [Repeatedly perform the grouping of utterances in the validation set in order to find the best hyper-parameters maximing the clustering clustering on the validation set](#30-performing-hyperparameter-selection-on-the-validation-set);
+4. [Perform the final clustering of test; utterances using the optimal hyper-paramters found at step 3](#40-perform-the-final-clustering-on-the-test-set-using-the-optimal-hyper-parameters);
+5. [Returns the clutering accuracy of the final clustering on the test set](#50-returns-the-clutering-accuracy-of-the-final-clustering-on-the-test-set)
 
-### Experiments
+##### 1.0 Loading the validation and test set
 
-The script `experiments_main.py` contains the code for running the clustering experiments.
-
-The name of the dataset to use is stored in the `dataset` variable.
-
-The path of the file containing the validation set is:
-
-```
-data/Final_Datasets_For_Experiments/{dataset}/labeled_utterances_for_for_hyperparameter_optimization.csv
-```
-
-The validation set is read from file and stored as a data frame in the `dev_dataset` variable
-
-The pat of the file containing the test set is:
-
-```
-data/Final_Datasets_For_Experiments/{dataset}/new_unlabeled_utterances_to_cluster.csv'
+When the experiments start, the name of the datasets to use will be read from the `datasets` variable.
+```python
+datasets = ['Massive', ]
 ```
 
-The test set is read from the file and stored as a data frame in the `test_dataset` variable.
-
-#### Data Sampling
-
-The variable `fract_data_ti_use` specifies the percentage of utterances to use for the experiments. If `the fract_data_to_use` value is < 1.0, then the dataset is  downsampled to match the fraction of data specified.
-
-#### Extracting features 
-
-The function `prepare_features_for_clustering` extract the embeddings corresponding to the utterances stored in the  dataframes of the validation and test set. During the embeddings extraction process, the program will output the message: `EXTRACTING THE FEATURES`
-
-The variables containing the extracted embeddings are called `dev_features` and `test_features`, rispectively.
-
-#### Applying clustering algorithms
-
-When the script `experiments_main.py` is launched, all the clustering experiments defined at the begin of the file are executed. For each algorithm, all the corresponding hyperparamters together with their range of values are stored in the `paramter_ranges` variable. The function `fine_tune_unsupervised_clustering_parameters` takes care of finding the hyperparameters values maximizing the selected optmization criterion, such as **Accuracy** or **Adjusted Mutual Information Score**. When the hyperparameter optimization process start, the program will output the message: `EXPERIMENT NUMBER:`
-
-#### Results 
-
-The `fine_tune_unsupervised_clustering_parameters` will return the results on the validation set (`results_train`), the results on the test set (`results_test`) and the best hyperparameter configuration (`best_experiment_config`). The results coresponding to the best parameters configuration are stored in the variables `experiment_train` and `experiment_test` for the validation and test set, respectively. 
-Finally, the best results are saved on two files: 
-
-1. The best results on the validation set are saved in:
-
-```
-experiment_results/experiments_unsupervised_clustering_open_baseline_datasets_train
+For each selected dataset, the  data split containg the validation set is read from file `dev.csv`  and stored in the variable `dev_dataset`. The latter is used to to select the hyper-parameters that results in the best clustering on the validation set.
+```python
+dev_dataset = pd.read_csv(f"data/Final_Datasets_For_Experiments/{dataset}/dev.csv")
 ```
 
-2. The best results on the test set are saved in:
-
+Similarly, the data split containing the test set is read from file  `test.csv` and stored in the variable `test_dataset`:
+```python
+test_dataset = pd.read_csv(f"data/Final_Datasets_For_Experiments/{dataset}/test.csv")
 ```
-experiment_results/experiments_unsupervised_clustering_open_baseline_datasets_test
+
+This will be used to perform the clustering of utterances in the test and measure the final accuracy of the clustering algorithm.
+
+**Data Sampling**. The parameter `fract_data_to_use` in the body of the script specifies the percentage of utterances that will be used in  the experiments. If the `fract_data_to_use` value is smaller than `1.0`, then the dataset is  downsampled to match the specified fraction value
+This paramer is expecially useful for reducing the time needed to perform experiments on large test sets.
+ 
+
+#####  2.0 Deriving the embeddings representations of utterances
+
+The process of extracting the embeddings corresponding to utterances in the validation and test set is performed by the function `prepare_features_for_clustering`. 
+
+```python
+dev_features = prepare_features_for_clustering(
+   dev_dataset, language_model=language_model_path)
+test_features = prepare_features_for_clustering(
+   test_dataset, language_model=language_model_path)
 ```
 
-### Hyperparamters Optimization
+The function `prepare_features_for_clustering` takes in input a dataframe containing a list of the utterances and the name of the language model to use for extracting the embedings corresponding to the input utterances.
+Then, it returns an *L<sub>2</sub>*-normlized version of the embeddings corresponding to the input utterances, which will be stored in the objects  `dev_features` and `test_features` for the validaton and test set, respectively.
 
-The script `experiment_utils.py` contains all the code for performing optmization of the clustering algorithms' hyperparamaters.
+```python
+def prepare_features_for_clustering(
+    utterances_dataframe: pd.DataFrame, 
+    language_model: str = 'base_language_models/paraphrase-multilingual-mpnet-base-v2',
+    name_utterances_column: str = 'utterance_text'):
+    
+    utterances = utterances_dataframe[name_utterances_column].to_list()
+    features = get_sentence_embeddings(utterances, language_model)
+    feature_vectors = np.array(features)
+    normalized_vectors = preprocessing.normalize(feature_vectors, norm="l2")
 
-In particular, the function `fine_tune_unsupervised_clustering_parameters` - already introduced in the previous section — performs the search over the space of hyper-parameters values defined by the user.
+    return normalized_vectors
+```
 
-#### Hyper-parameters Search
+Note that during the embeddings extraction process, the program will output the message `EXTRACTING THE FEATURES`.
+ 
 
-The hyper-parameters values passed to the function anre stored in the parameter `algorithm_param_ranges_to_optimize`, which contains all possible combinations of values in a grid search fashion.
+##### 3.0 Performing hyperparameter selection on the validation set
 
-During the hyperparameter optimization process, the function repeatedly perform clustering according to the algorithm selected and the specific set of hyper-parametrs values under consideration at the current step. The the set of predicted clusters corresponding to specific algorithm-hyperparameters pair is stored in the variable `new_clusters`. All the intermediate clustering results are also stored in the variable `dict_to_compare_experiments`, which keep track all the intermediate experiments results.
-At the end, only the configuration of the experiment with the best result is selected, which is the one giving the best results according to the  selected optimization metric (Clustering Accuracy or Adjusted Mutual Information Score). Then, the function returns the configuration of the best experiment, with the corresponding metrics computed on the validation and test set. These are stored in the variables `best_experiment_config`, `final_metrics_dict_on_train` and `final_metrics_dict_on_test`, respectively.
+The variable `clustering_algorithms` containing the list of algorithms that will be run in the experiments.
 
-#### Evaluation of predicted clustering
+```python
+clustering_algorithms = {
+   'connected_componentes': connected_components,
+   'DBSCAN': DBSCAN,
+}
+```
 
-The function `evaluate_new_clusters` takes in input the validation set and the predictions of the model. It then compute the assignment of utterances to the gold clusters `gold_cluster_assignments` and the the assignments of utterances to predicted clusters `pred_cluster_assignments`.
-These assignments are then pased to the function `get_gold_and_predicted_clusters` to reconstruct the reference and predicted clusters, which are stored in the `gold_clusters` and `reconstructed_clusters` variables.
+Each clustering algorithm is assoiated with a list of hyperparameters, whose range of possible values is defind in the dict object `parameters_to_optimize`
 
-#### Evaluation Metrics
+```python
+parameters_to_optimize = {
+    'connected_componentes':  {
+        'cut_threshold': [
+            0.3, 0.50, 1.0],
+    },
+    'DBSCAN': {
+        'eps': [
+            0.05, 0.50, 1], 
+        'min_samples': [2, 5, 10, 15, 20, 25, 30],
+    },
+}
+```
 
-The gold and reconstructed clusters are passed to the `compute_evaluation_metrics` function, which will return the clustering metrics results, which are stored as dict in the `metric_dict` variable. The metrics_dict reports the name of clustering evaluation metrics such as Clustering *Precision*, *Recall*, *F<sub>1</sub> score*, *Accuracy*, etc.. together with their corresponding values.
+In order to find the hyperparameters that maximize the accuracy of the predicted clustering (measured on the validation set), we run the function `fine_tune_unsupervised_clustering_parameters` on the list of algorithms (`clustering_algorithms`) and the associated hyperparamters (`parameters_to_optimize`) defined above.
 
+```python
+for algorithm in clustering_algorithms.keys():
+   for optimization_criterion in ['adjusted_mutual_info_score', 'clustering_accuracy']:
+      clustering_algorithm = clustering_algorithms[algorithm]
+      parameters_ranges = parameters_to_optimize[algorithm]
+
+      results_test, results_train, best_experiment_config = fine_tune_unsupervised_clustering_parameters(
+         dev_dataset, test_dataset, 
+         dev_features, test_features,
+         clustering_algorithm, parameters_ranges, optimization_criterion
+      )
+```
+
+To maximize the accuracy of the predicted clustering, we must provide in input to the function also the measure we want to optimize, such as **Clustering Accuracy** or **Adjusted Mutual Information Score**.
+
+When the hyperparameter optimization process starts, the program will output the message: `EXPERIMENT NUMBER:`
+
+**Hyperparameters search**.  During the hyperparameter optimization process, the function `fine_tune_unsupervised_clustering_parameters` will repeatedly perform clustering according to the algorithm selected and the specific set of hyper-parametrs values under consideration at each optimization step. 
+
+```python
+def fine_tune_unsupervised_clustering_parameters(
+    train_dataset, test_dataset, #train_dataset, 
+    train_features, test_features, #train_features,
+    algorithm, algorithm_param_ranges_to_optimize,
+    optimization_criterion):
+
+    experiment_list = list(product_dict(**algorithm_param_ranges_to_optimize))
+
+    results = {}
+    dict_to_compare_experiments = {}
+    
+    for count, experiment_hyperparameters in enumerate(experiment_list):
+        
+        print("EXPERIMENT NUMBER: ", count/len(experiment_list))
+
+        new_clusters = algorithm(train_features, **experiment_hyperparameters)
+        metrics_dict = evaluate_new_clusters(train_dataset, new_clusters)
+        results[count] = metrics_dict
+        dict_to_compare_experiments[count] = metrics_dict[optimization_criterion]
+    
+    best_experiment = max(dict_to_compare_experiments, key=dict_to_compare_experiments.get)
+
+    best_experiment_config = experiment_list[best_experiment]
+
+    test_clusters = algorithm(test_features, **best_experiment_config)
+    final_metrics_dict_on_test = evaluate_new_clusters(test_dataset, test_clusters)
+
+    train_clusters = algorithm(train_features, **best_experiment_config)
+    final_metrics_dict_on_train = evaluate_new_clusters(train_dataset, train_clusters)
+
+    return final_metrics_dict_on_test, final_metrics_dict_on_train, best_experiment_config
+```
+
+The set of predicted clusters corresponding the specific algorithm-hyperparameters pair being examined is stored in the variable `new_clusters`, while the obejct `dict_to_compare_experiments` keep store the metric values results for each pair.
+When the function execution ends, only the configuration of the experiment with the best result is selected, which is the one giving the best results on the validation set according to the selected optimization metrics. Then, the function use the optimal validation hyperparameters to compute and return the final results on the test set. 
+These best hyperparameters are stored in the object `best_experiment_config`. Instead, the final results on validation and test sets are stored in the objects `final_metrics_dict_on_train` and `final_metrics_dict_on_test`, respectively.
+
+
+##### 4.0 Performing the final clustering on the test set using the optimal hyper-parameters
+
+The function `fine_tune_unsupervised_clustering_parameters` will return the best clustering results on the validation set and test set, which will be stored repsectively in the `results_train` and `results_test` objects in the main program.
+
+```python
+results_test, results_train, best_experiment_config = fine_tune_unsupervised_clustering_parameters(
+   dev_dataset, test_dataset, #train_dataset
+   dev_features, test_features,#train_features
+   clustering_algorithm, parameters_ranges, optimization_criterion
+)
+```
+
+Then, the best results onthe validation are saved to file:
+```python
+experiments_unsupervised_clustering_open_baseline_datasets_train.
+```
+
+Similarly, the final results on the test set are saved to file:
+```python
+experiments_unsupervised_clustering_open_baseline_datasets_test
+```
+
+##### 5.0 Returning the clutering accuracy of the final clustering on the test set
+
+The function `evaluate_new_clusters` takes in input the  dataset containing utterances to cluster (`utterances_dataset`) and the clustering predicted by the model (`pred_clusters`) and returns an object (`results`)  containing a set of metrics values measuring the predicted clustering accuracy.
+
+To do this, the function `evaluate_new_clusters` internally computes the assignment of utterances both to the gold clusters (`gold_cluster_assignments`) and predicted clusters (`pred_cluster_assignments`). Each utterance id is associated to a cluster id, which is ia number identifying the cluster it belongs to (e.g. `utterance001` &rarr; `cid01` )
+
+These cluster assignments are then passed to the function `get_gold_and_predicted_clusters` to reconstruct the reference and predicted clusters, which are stored in the `gold_clusters` and `reconstructed_clusters` objects, respectively.
+
+Finally, the `gold_clusters` and `reconstructed_clusters` objects are passed to the `compute_evaluation_metrics`, which computes micro and macro-average version of the provided clustering evaluation metrics, such as Clustering Accuracy, AMIS, etc..
+
+```python
+def evaluate_new_clusters(utterances_dataset: pd.DataFrame, pred_clusters):
+   utterances_dataset_eval = utterances_dataset.copy()
+   utterances_dataset_eval.loc[:, 'utterance_intent_pred'] = pred_clusters
+
+   pred_cluster_assignments = utterances_dataset_eval['utterance_intent_pred'].to_list()
+   gold_cluster_assignments = utterances_dataset_eval['utterance_intent'].to_list()
+
+   gold_clusters, reconstructed_clusters = get_gold_and_predicted_clusters(utterances_dataset_eval)
+
+   results = compute_evaluation_metrics(
+        pred_cluster_assignments, gold_cluster_assignments,
+        gold_clusters, reconstructed_clusters)
+
+   return results
+```
+
+**Evaluation Metrics**. The  metrics results returned by the function `compute_evaluation_metrics` function are stored in a dict object. The dict keys are the name of clustering evaluation metrics such as Clustering Precision, Recall, F<sub>1</sub> score, Clustering Accuracy and Adjusted Mutual Information Score. The dict values instead correpond to the metric values.
+
+Please, notice that the clustering version of the Precision, Recall and F<sub>1</sub> metrics is different from the corresponding classification version of the metrics. A complete definition of the clustering version of precision, recall, f<sub>1</sub> metrics can be found in [[1]](#1).
+
+
+#####References
+<a id="1">[1]</a> Iryna Haponchyk, Antonio Uva, Seunghak Yu, Olga Uryupina, and Alessandro Moschitti. 2018. [Supervised Clustering of Questions into Intents for Dialog System Applications](https://aclanthology.org/D18-1254/). In *Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing*, pages 2310–2321, Brussels, Belgium. Association for Computational Linguistics.
