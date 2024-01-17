@@ -88,7 +88,8 @@ monolingual_dict_frac_to_use = {
     'BANKING77': 1.0,
     'CLINC150': 0.75,  
     'HWU64': 1.0,
-    'apibench_data': 0.20
+    #'apibench_data': 0.20
+    'apibench_data': 1.0,
 }
 
 multilingual_dict_frac_to_use = {
@@ -110,12 +111,14 @@ parameters_to_optimize = {
     #         0.3, 0.35, 0.4, 0.45, 0.50, 0.55, 0.6, 0.65, 0.70, 0.75, 0.8, 0.85, 0.90, 0.95, 1, 1.05, 1.1],
     # },
     'agglomerative_hierarchical_clustering': {
-        'linkage': ['single'],
-        #'distance_threshold': [0.0, 0.25, 0.50, 0.75, 1.0]
+        #'linkage': ['single'],
+        'linkage': ['average'],
+        #'distance_threshold': [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
         # 'linkage': ['ward', 'complete', 'average'],
-         'distance_threshold': [
-             0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.50, 0.55, 0.6, 0.65, 0.70, 0.75, 0.8, 0.85, 0.90, 0.95, 1, 
-             1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45, 1.50, 1.95], # 1.55, 1.6, 1.65, 1.70, 1.75, 1.8, 1.85, 1.90, 
+        'distance_threshold': list(np.linspace(0.00, 1.00, 50)),
+        # 'distance_threshold': [
+        #     0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.50, 0.55, 0.6, 0.65, 0.70, 0.75, 0.8, 0.85, 0.90, 0.95, 1, 
+        #     1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45, 1.50, 1.95], # 1.55, 1.6, 1.65, 1.70, 1.75, 1.8, 1.85, 1.90, 
     },
     # 'DBSCAN': {
     #     'eps': [
@@ -197,13 +200,17 @@ for i in range(4, 5):
 #                 train_dataset, language_model=language_model_to_use)
             dev_features = prepare_features_for_clustering(
                 dev_dataset, language_model=language_model_path)
+            print("dev_features:", len(dev_features))
+
             test_features = prepare_features_for_clustering(
                 test_dataset, language_model=language_model_path)
-            
+            print("test_features:", len(test_features))
+
             print('EXPERIMENTS ARE STARTING')
 
             for algorithm in clustering_algorithms.keys():
                 for optimization_criterion in ['adjusted_mutual_info_score', 'clustering_accuracy']:
+                #for optimization_criterion in ['clustering_accuracy']:
                     clustering_algorithm = clustering_algorithms[algorithm]
                     parameters_ranges = parameters_to_optimize[algorithm]
 
